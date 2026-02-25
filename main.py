@@ -8,6 +8,10 @@ app = FastAPI(
     title="MilaMart Labs API",
     description="Search and browse MilaMart Labs — a curated product store powered by real product data and images.",
     version="1.0.0",
+    servers=[
+        {"url": "https://milamart-labs.onrender.com", "description": "Production"},
+        {"url": "http://localhost:8000", "description": "Local development"},
+    ]
 )
 
 app.add_middleware(
