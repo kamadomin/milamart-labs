@@ -344,20 +344,27 @@ async def get_all_products(limit: int = Query(100)):
 
 @app.get("/api/products/search", summary="Search products by keyword and/or category")
 async def search_products(
-    query: Optional[str] = Query(None, description="Keyword e.g. phone, laptop, skincare"),
-    category: Optional[str] = Query(None, description="Category to filter by"),
-    max_results: int = Query(5, description="Max results to return (default 5, max 20)")
+    query: str = Query("", description="Keyword e.g. phone, laptop, skincare"),
+    category: str = Query("", description="Category to filter by"),
+    max_results: int = Query(5, description="Max results to return")
 ):
     """Search MilaMart Labs products. Use when a user wants to find or browse products."""
     products = await get_products()
-    max_results = min(max_results, 20)
-    results = filter_products(products, query or "", category or "")[:max_results]
-    # Trim for AI response size
-    slim = [{"id": p["id"], "name": p["name"], "brand": p["brand"],
-             "category": p["category"], "price": p["price"],
-             "rating": p["rating"], "stock": p["stock"],
-             "description": p["description"][:120] + "..."} for p in results]
-    return {"query": query, "category": category, "total": len(slim), "products": slim}
+    results = filter_products(products, query, category)[:min(max_results, 10)]
+    slim = [
+        {
+            "id": p["id"],
+            "name": p["name"],
+            "brand": p["brand"],
+            "category": p["category"],
+            "price": p["price"],
+            "rating": p["rating"],
+            "stock": p["stock"],
+            "description": p["description"][:100]
+        }
+        for p in results
+    ]
+    return {"total": len(slim), "products": slim}
 
 @app.get("/api/products/{product_id}", summary="Get a single product by ID")
 async def get_product(product_id: str):
