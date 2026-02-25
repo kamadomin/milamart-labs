@@ -332,6 +332,210 @@ async def homepage():
 
   init();
 </script>
+
+<!-- ── CHAT WIDGET ─────────────────────────────────────────── -->
+<style>
+  .chat-bubble {
+    position: fixed; bottom: 28px; right: 28px; z-index: 999;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--text); color: var(--white);
+    border: none; cursor: pointer; font-size: 1.4rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    transition: background .2s, transform .2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chat-bubble:hover { background: var(--accent); transform: scale(1.05); }
+
+  .chat-panel {
+    position: fixed; bottom: 92px; right: 28px; z-index: 999;
+    width: 360px; height: 520px;
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 16px; box-shadow: 0 12px 48px rgba(0,0,0,0.15);
+    display: none; flex-direction: column; overflow: hidden;
+    animation: slideUp .2s ease;
+  }
+  .chat-panel.open { display: flex; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .chat-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .chat-header-left { display: flex; align-items: center; gap: 10px; }
+  .chat-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--text); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem;
+  }
+  .chat-title { font-family: 'DM Serif Display', serif; font-size: .95rem; }
+  .chat-subtitle { font-size: .7rem; color: var(--accent); font-weight: 400; }
+  .chat-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 1.1rem; padding: 4px;
+  }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .msg { display: flex; gap: 8px; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-bubble {
+    max-width: 80%; padding: 10px 14px; border-radius: 12px;
+    font-size: .82rem; line-height: 1.5; font-weight: 300;
+  }
+  .msg.ai .msg-bubble { background: var(--soft); color: var(--text); border-radius: 4px 12px 12px 12px; }
+  .msg.user .msg-bubble { background: var(--text); color: var(--white); border-radius: 12px 4px 12px 12px; }
+
+  .product-cards { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .product-card-mini {
+    display: flex; gap: 10px; align-items: center;
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px; text-decoration: none;
+    color: var(--text); transition: background .15s;
+  }
+  .product-card-mini:hover { background: var(--soft); }
+  .product-card-mini img {
+    width: 48px; height: 48px; object-fit: cover;
+    border-radius: 6px; flex-shrink: 0;
+  }
+  .product-card-mini-info { min-width: 0; }
+  .product-card-mini-name { font-size: .78rem; font-weight: 400; line-height: 1.3; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .product-card-mini-meta { font-size: .72rem; color: var(--muted); }
+
+  .typing { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce .9s infinite; }
+  .typing span:nth-child(2) { animation-delay: .15s; }
+  .typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  .chat-input-row {
+    padding: 12px 16px; border-top: 1px solid var(--border);
+    display: flex; gap: 8px;
+  }
+  .chat-input {
+    flex: 1; padding: 9px 14px; border: 1px solid var(--border);
+    border-radius: 100px; outline: none; font-family: 'DM Sans', sans-serif;
+    font-size: .82rem; font-weight: 300; color: var(--text);
+    transition: border-color .2s;
+  }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-send {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--text); color: var(--white);
+    border: none; cursor: pointer; font-size: .9rem;
+    transition: background .2s; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chat-send:hover { background: var(--accent); }
+</style>
+
+<button class="chat-bubble" onclick="toggleChat()" title="Chat with AI">💬</button>
+
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <div class="chat-avatar">M</div>
+      <div>
+        <div class="chat-title">MilaMart Assistant</div>
+        <div class="chat-subtitle">● online</div>
+      </div>
+    </div>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="msg ai">
+      <div class="msg-bubble">Hi! 👋 I'm your MilaMart shopping assistant. Ask me anything — <em>"show me laptops"</em>, <em>"find skincare under $20"</em>, or <em>"what watches do you have?"</em></div>
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" placeholder="Ask about products..." autocomplete="off">
+    <button class="chat-send" onclick="sendChat()">↑</button>
+  </div>
+</div>
+
+<script>
+  let chatOpen = false;
+  let chatHistory = [];
+
+  function toggleChat() {
+    chatOpen = !chatOpen;
+    document.getElementById('chatPanel').classList.toggle('open', chatOpen);
+    if (chatOpen) document.getElementById('chatInput').focus();
+  }
+
+  function addMessage(role, text, products) {
+    const msgs = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+
+    if (role === 'ai') {
+      let html = `<div class="msg-bubble">${text}</div>`;
+      if (products && products.length) {
+        html += '<div class="product-cards">' +
+          products.map(p => `
+            <a class="product-card-mini" href="/product/${p.id}" target="_blank">
+              <img src="${p.image}" alt="${p.name}">
+              <div class="product-card-mini-info">
+                <div class="product-card-mini-name">${p.name}</div>
+                <div class="product-card-mini-meta">${p.brand ? p.brand + ' · ' : ''}$${p.price.toFixed(2)} · ⭐ ${p.rating}</div>
+              </div>
+            </a>`).join('') +
+          '</div>';
+      }
+      div.innerHTML = html;
+    } else {
+      div.innerHTML = `<div class="msg-bubble">${text}</div>`;
+    }
+
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showTyping() {
+    const msgs = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'msg ai'; div.id = 'typingIndicator';
+    div.innerHTML = '<div class="msg-bubble typing"><span></span><span></span><span></span></div>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typingIndicator');
+    if (t) t.remove();
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    addMessage('user', text);
+    chatHistory.push({ role: 'user', content: text });
+    showTyping();
+
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: chatHistory.slice(-6) })
+      });
+      const data = await r.json();
+      removeTyping();
+      addMessage('ai', data.reply, data.products);
+      chatHistory.push({ role: 'assistant', content: data.reply });
+    } catch(e) {
+      removeTyping();
+      addMessage('ai', 'Sorry, something went wrong. Please try again!');
+    }
+  }
+
+  document.getElementById('chatInput')
+    .addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+</script>
 </body>
 </html>"""
 
@@ -537,6 +741,62 @@ async def product_page(product_id: str):
 
 </body>
 </html>"""
+
+
+
+from pydantic import BaseModel
+from typing import List
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    message: str
+    history: List[ChatMessage] = []
+
+@app.post("/api/chat", include_in_schema=False)
+async def chat(req: ChatRequest):
+    """AI chat endpoint — searches products and returns a conversational reply."""
+    products = await get_products()
+
+    # Simple keyword extraction to search products
+    query = req.message.lower()
+    # Remove common words
+    stopwords = {"show","me","find","get","i","want","need","looking","for","some","a","an","the","please","can","you","have","do","what","any","is","are","with","under","over","cheap","best","good"}
+    keywords = [w for w in query.split() if w not in stopwords and len(w) > 2]
+
+    matched = []
+    if keywords:
+        for p in products:
+            score = sum(1 for kw in keywords if
+                kw in p["name"].lower() or
+                kw in p["category"].lower() or
+                kw in p.get("brand","").lower() or
+                kw in p["description"].lower()
+            )
+            if score > 0:
+                matched.append((score, p))
+        matched.sort(key=lambda x: -x[0])
+        matched = [p for _, p in matched[:4]]
+
+    # Price filter
+    import re
+    price_match = re.search(r"under \$(\d+)", req.message.lower())
+    if price_match:
+        limit = float(price_match.group(1))
+        matched = [p for p in (matched or products) if p["price"] <= limit][:4]
+
+    if matched:
+        names = ", ".join(p["name"] for p in matched[:2])
+        reply = f"I found {len(matched)} product{'s' if len(matched)>1 else ''} for you! Here {'are' if len(matched)>1 else 'is'} **{names}**{'and more' if len(matched)>2 else ''}. Click any product to see full details."
+    else:
+        # Show some suggestions
+        import random
+        matched = random.sample(products, min(3, len(products)))
+        reply = "I couldn't find an exact match, but here are some products you might like! You can also try searching for: laptops, phones, skincare, watches, furniture or jewellery."
+
+    return {"reply": reply, "products": matched}
 
 
 # ─── AI DISCOVERABILITY ───────────────────────────────────────────────────────
