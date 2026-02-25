@@ -295,7 +295,7 @@ async def homepage():
     }
 
     grid.innerHTML = products.map((p, i) => `
-      <div class="card" style="animation-delay:${Math.min(i,24)*0.02}s">
+      <a class="card" href="/product/${p.id}" style="animation-delay:${Math.min(i,24)*0.02}s; text-decoration:none; color:inherit; display:block;">
         <img class="card-img" src="${p.image}" alt="${p.name}" loading="lazy">
         <div class="card-body">
           <span class="card-cat">${p.category}</span>
@@ -306,9 +306,9 @@ async def homepage():
             <div class="card-price">$${p.price.toFixed(2)}</div>
             <div class="card-rating"><span>&#9733;</span> ${p.rating} &middot; ${p.stock} left</div>
           </div>
-          <button class="card-btn">Add to cart</button>
+          <button class="card-btn" onclick="event.preventDefault()">View product</button>
         </div>
-      </div>`).join('');
+      </a>`).join('');
   }
 
   function doSearch() {
@@ -364,6 +364,161 @@ async def get_categories():
     products = await get_products()
     cats = sorted(set(p["category"] for p in products))
     return {"categories": cats}
+
+
+@app.get("/product/{product_id}", response_class=HTMLResponse, include_in_schema=False)
+async def product_page(product_id: str):
+    products = await get_products()
+    p = next((x for x in products if x["id"] == product_id), None)
+    if not p:
+        return HTMLResponse("<h1>Product not found</h1>", status_code=404)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{p['name']} — MilaMart Labs</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {{
+    --bg: #faf9f7; --white: #ffffff; --border: #ede9e3;
+    --text: #2c2825; --muted: #9c9690; --soft: #f3f0eb; --accent: #5c7a6a;
+  }}
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-weight:300; }}
+
+  header {{
+    background:var(--white); border-bottom:1px solid var(--border);
+    padding:0 48px; height:60px; display:flex; align-items:center;
+    justify-content:space-between; position:sticky; top:0; z-index:100;
+  }}
+  .logo {{ font-family:'DM Serif Display',serif; font-size:1.25rem; color:var(--text); text-decoration:none; }}
+  .logo em {{ font-style:italic; color:var(--accent); }}
+  .back {{ font-size:.82rem; color:var(--muted); text-decoration:none; display:flex; align-items:center; gap:6px; transition:color .15s; }}
+  .back:hover {{ color:var(--text); }}
+
+  .product-wrap {{
+    max-width: 1000px;
+    margin: 60px auto;
+    padding: 0 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: start;
+  }}
+
+  .product-img-wrap {{
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--soft);
+    aspect-ratio: 1;
+  }}
+  .product-img {{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }}
+
+  .product-info {{ padding-top: 8px; }}
+  .product-cat {{
+    display: inline-block; font-size:.68rem; letter-spacing:1.5px;
+    text-transform:uppercase; color:var(--muted); margin-bottom:14px;
+  }}
+  .product-brand {{
+    font-size:.75rem; letter-spacing:1px; text-transform:uppercase;
+    color:var(--accent); margin-bottom:8px; font-weight:400;
+  }}
+  .product-name {{
+    font-family:'DM Serif Display',serif; font-size:2rem; font-weight:400;
+    line-height:1.2; margin-bottom:16px; color:var(--text);
+  }}
+  .product-rating {{
+    display:flex; align-items:center; gap:8px;
+    font-size:.8rem; color:var(--muted); margin-bottom:20px;
+  }}
+  .product-rating .stars {{ color:#c8a96e; font-size:.95rem; }}
+  .product-price {{
+    font-size:1.8rem; font-weight:400; margin-bottom:24px; color:var(--text);
+  }}
+  .divider {{ height:1px; background:var(--border); margin-bottom:24px; }}
+  .product-desc {{
+    font-size:.9rem; line-height:1.75; color:var(--muted);
+    margin-bottom:32px; font-weight:300;
+  }}
+  .product-meta {{
+    display:flex; gap:24px; margin-bottom:32px;
+  }}
+  .meta-item {{
+    font-size:.78rem; color:var(--muted);
+  }}
+  .meta-item strong {{ display:block; color:var(--text); font-weight:400; font-size:.85rem; margin-bottom:2px; }}
+
+  .btn-cart {{
+    width:100%; padding:15px;
+    background:var(--text); color:var(--white);
+    border:none; border-radius:6px;
+    font-family:'DM Sans',sans-serif; font-weight:400; font-size:.9rem;
+    cursor:pointer; transition:background .2s; margin-bottom:12px;
+    letter-spacing:.3px;
+  }}
+  .btn-cart:hover {{ background:var(--accent); }}
+  .btn-back {{
+    width:100%; padding:13px;
+    background:transparent; color:var(--text);
+    border:1px solid var(--border); border-radius:6px;
+    font-family:'DM Sans',sans-serif; font-weight:300; font-size:.85rem;
+    cursor:pointer; transition:all .2s; text-align:center;
+    text-decoration:none; display:block;
+  }}
+  .btn-back:hover {{ border-color:var(--text); }}
+
+  @media(max-width:700px) {{
+    .product-wrap {{ grid-template-columns:1fr; gap:32px; padding:0 20px; margin:32px auto; }}
+    header {{ padding:0 20px; }}
+  }}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">Mila<em>Mart</em> Labs</a>
+  <a class="back" href="/">← Back to store</a>
+</header>
+
+<div class="product-wrap">
+  <div class="product-img-wrap">
+    <img class="product-img" src="{p['image']}" alt="{p['name']}">
+  </div>
+
+  <div class="product-info">
+    <div class="product-cat">{p['category']}</div>
+    <div class="product-brand">{p.get('brand', '')}</div>
+    <h1 class="product-name">{p['name']}</h1>
+
+    <div class="product-rating">
+      <span class="stars">{'★' * int(round(p['rating']))}</span>
+      <span>{p['rating']} rating</span>
+    </div>
+
+    <div class="product-price">${p['price']:.2f}</div>
+    <div class="divider"></div>
+    <p class="product-desc">{p['description']}</p>
+
+    <div class="product-meta">
+      <div class="meta-item"><strong>{p['stock']}</strong>in stock</div>
+      <div class="meta-item"><strong>{p.get('brand', '—')}</strong>brand</div>
+      <div class="meta-item"><strong>#{p['id']}</strong>product id</div>
+    </div>
+
+    <button class="btn-cart">Add to cart</button>
+    <a class="btn-back" href="/">← Continue shopping</a>
+  </div>
+</div>
+
+</body>
+</html>"""
+
 
 # ─── AI DISCOVERABILITY ───────────────────────────────────────────────────────
 @app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
