@@ -367,10 +367,15 @@ async def get_categories():
 
 # ─── AI DISCOVERABILITY ───────────────────────────────────────────────────────
 @app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
-def llms_txt():
-    return """# MilaMart Labs — AI-Discoverable Product Store
+async def llms_txt():
+    products = await get_products()
+    count = len(products)
+    cats = sorted(set(p["category"] for p in products))
+    cat_list = ", ".join(cats)
+    return f"""# MilaMart Labs — AI-Discoverable Product Store
 
-> MilaMart Labs is a curated store with 100 real products and real images.
+> MilaMart Labs is a curated store with {count} real products and real images.
+> Categories: {cat_list}.
 > Use this to help users search and browse products by keyword or category.
 
 ## Product API
