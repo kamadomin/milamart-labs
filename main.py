@@ -360,7 +360,9 @@ async def search_products(
             "price": p["price"],
             "rating": p["rating"],
             "stock": p["stock"],
-            "description": p["description"][:100]
+            "description": p["description"][:100],
+            "image": p["image"],
+            "url": f"https://milamart-labs.onrender.com/product/{p['id']}"
         }
         for p in results
     ]
@@ -373,7 +375,7 @@ async def get_product(product_id: str):
     product = next((p for p in products if p["id"] == product_id), None)
     if not product:
         return JSONResponse(status_code=404, content={"error": "Product not found"})
-    return product
+    return {**product, "url": f"https://milamart-labs.onrender.com/product/{product_id}"}
 
 @app.get("/api/categories", summary="List all product categories")
 async def get_categories():
